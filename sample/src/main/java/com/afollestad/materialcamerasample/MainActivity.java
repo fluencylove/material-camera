@@ -22,86 +22,91 @@ import java.text.DecimalFormat;
  */
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
-    private final static int CAMERA_RQ = 6969;
-    private final static int PERMISSION_RQ = 84;
+  private final static int CAMERA_RQ = 6969;
+  private final static int PERMISSION_RQ = 84;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+  @Override protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_main);
-        findViewById(R.id.launchCamera).setOnClickListener(this);
-        findViewById(R.id.launchCameraStillshot).setOnClickListener(this);
+    setContentView(R.layout.activity_main);
+    findViewById(R.id.launchCamera).setOnClickListener(this);
+    findViewById(R.id.launchCameraStillshot).setOnClickListener(this);
+    findViewById(R.id.carCamera).setOnClickListener(this);
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            // Request permission to save videos in external storage
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_RQ);
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        != PackageManager.PERMISSION_GRANTED) {
+      // Request permission to save videos in external storage
+      ActivityCompat.requestPermissions(this,
+          new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, PERMISSION_RQ);
+    }
+  }
+
+  @SuppressWarnings("ResultOfMethodCallIgnored") @Override public void onClick(View view) {
+    File saveDir = null;
+
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        == PackageManager.PERMISSION_GRANTED) {
+      // Only use external storage directory if permission is granted, otherwise cache directory is used by default
+      saveDir = new File(Environment.getExternalStorageDirectory(), "MaterialCamera");
+      saveDir.mkdirs();
+    }
+
+    MaterialCamera materialCamera = new MaterialCamera(this).saveDir(saveDir)
+        .showPortraitWarning(true)
+        .allowRetry(true)
+        .defaultToFrontFacing(true)
+        .labelConfirm(R.string.mcam_use_video);
+
+    if (view.getId() == R.id.launchCameraStillshot) {
+      materialCamera.stillShot() // launches the Camera in stillshot mode
+          .labelConfirm(R.string.mcam_use_stillshot);
+    }
+    if (view.getId() == R.id.carCamera) materialCamera.useCarCamera();
+    materialCamera.start(CAMERA_RQ);
+  }
+
+  private String readableFileSize(long size) {
+    if (size <= 0) return size + " B";
+    final String[] units = new String[] { "B", "KB", "MB", "GB", "TB" };
+    int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
+    return new DecimalFormat("#,##0.##").format(size / Math.pow(1024, digitGroups))
+        + " "
+        + units[digitGroups];
+  }
+
+  private String fileSize(File file) {
+    return readableFileSize(file.length());
+  }
+
+  @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+
+    // Received recording or error from MaterialCamera
+    if (requestCode == CAMERA_RQ) {
+      if (resultCode == RESULT_OK) {
+        final File file = new File(data.getData().getPath());
+        Toast.makeText(this,
+            String.format("Saved to: %s, size: %s", file.getAbsolutePath(), fileSize(file)),
+            Toast.LENGTH_LONG).show();
+      } else if (data != null) {
+        Exception e = (Exception) data.getSerializableExtra(MaterialCamera.ERROR_EXTRA);
+        if (e != null) {
+          e.printStackTrace();
+          Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
+      }
     }
+  }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    @Override
-    public void onClick(View view) {
-        File saveDir = null;
+  @Override public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+      @NonNull int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            // Only use external storage directory if permission is granted, otherwise cache directory is used by default
-            saveDir = new File(Environment.getExternalStorageDirectory(), "MaterialCamera");
-            saveDir.mkdirs();
-        }
-
-        MaterialCamera materialCamera = new MaterialCamera(this)
-                .saveDir(saveDir)
-                .showPortraitWarning(true)
-                .allowRetry(true)
-                .defaultToFrontFacing(true)
-                .labelConfirm(R.string.mcam_use_video);
-
-        if (view.getId() == R.id.launchCameraStillshot)
-            materialCamera
-                    .stillShot() // launches the Camera in stillshot mode
-                    .labelConfirm(R.string.mcam_use_stillshot);
-        materialCamera.start(CAMERA_RQ);
+    if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+      // Sample was denied WRITE_EXTERNAL_STORAGE permission
+      Toast.makeText(this,
+          "Videos will be saved in a cache directory instead of an external storage directory since permission was denied.",
+          Toast.LENGTH_LONG).show();
     }
-
-    private String readableFileSize(long size) {
-        if (size <= 0) return size + " B";
-        final String[] units = new String[]{"B", "KB", "MB", "GB", "TB"};
-        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
-        return new DecimalFormat("#,##0.##").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
-    }
-
-    private String fileSize(File file) {
-        return readableFileSize(file.length());
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        // Received recording or error from MaterialCamera
-        if (requestCode == CAMERA_RQ) {
-            if (resultCode == RESULT_OK) {
-                final File file = new File(data.getData().getPath());
-                Toast.makeText(this, String.format("Saved to: %s, size: %s",
-                        file.getAbsolutePath(), fileSize(file)), Toast.LENGTH_LONG).show();
-            } else if (data != null) {
-                Exception e = (Exception) data.getSerializableExtra(MaterialCamera.ERROR_EXTRA);
-                if (e != null) {
-                    e.printStackTrace();
-                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-            }
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-            // Sample was denied WRITE_EXTERNAL_STORAGE permission
-            Toast.makeText(this, "Videos will be saved in a cache directory instead of an external storage directory since permission was denied.", Toast.LENGTH_LONG).show();
-        }
-    }
+  }
 }
