@@ -11,10 +11,12 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 import com.afollestad.materialcamera.ICallback;
@@ -44,6 +46,8 @@ public class CarCameraFragment extends BaseCameraFragment implements View.OnClic
 
   CameraPreview mPreviewView;
   RelativeLayout mPreviewFrame;
+  CarBackView mCarBackView;
+  ImageView mImageView;
 
   private Camera.Size mVideoSize;
   private Camera mCamera;
@@ -95,13 +99,20 @@ public class CarCameraFragment extends BaseCameraFragment implements View.OnClic
 
   @Override public View onCreateView(LayoutInflater inflater, ViewGroup container,
       Bundle savedInstanceState) {
-    return inflater.inflate(R.layout.mcam_fragment_videocapture, container, false);
+    return inflater.inflate(R.layout.car_frag, container, false);
   }
 
   @Override public void onViewCreated(final View view, Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
     mPreviewFrame = (RelativeLayout) view.findViewById(R.id.rootFrame);
     mPreviewFrame.setOnClickListener(this);
+    mImageView = (ImageView) view.findViewById(R.id.car);
+    DisplayMetrics metrics = new DisplayMetrics();
+    getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
+    ViewGroup.LayoutParams layoutParams = mImageView.getLayoutParams();
+    layoutParams.width = RelativeLayout.LayoutParams.WRAP_CONTENT;
+    layoutParams.height = metrics.heightPixels/3;
+    mImageView.setLayoutParams(layoutParams);
   }
 
   @Override public void onDestroyView() {

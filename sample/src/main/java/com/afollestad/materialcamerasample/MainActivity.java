@@ -54,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     MaterialCamera materialCamera = new MaterialCamera(this).saveDir(saveDir)
         .showPortraitWarning(true)
         .allowRetry(true)
-        .defaultToFrontFacing(true)
         .labelConfirm(R.string.mcam_use_video);
 
     if (view.getId() == R.id.launchCameraStillshot) {
